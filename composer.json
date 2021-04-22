@@ -1,0 +1,29 @@
+{
+    "name": "pingink/php-protocol",
+    "description": "PHP实现协议",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "pingink",
+            "email": "pingink@163.com"
+        }
+    ],
+    "autoload": {
+        "psr-4" : {
+            "Pingink\\Protocol\\" : "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4" : {
+            "Pingink\\Protocol\\" : "tests/"
+        }
+    },
+    "require": {
+        "php": "^7.4||^8.0",
+        "lisachenko/protocol-fcgi": "^3.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "~7.0||~9.0",
+        "phpstan/phpstan": "^0.12.66"
+    }
+}
