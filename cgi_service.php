@@ -2,30 +2,28 @@
 
 use Lisachenko\Protocol\FCGI;
 use Lisachenko\Protocol\FCGI\FrameParser;
-use Lisachenko\Protocol\FCGI\Record;
 use Lisachenko\Protocol\FCGI\Record\BeginRequest;
 use Lisachenko\Protocol\FCGI\Record\Params;
-use Lisachenko\Protocol\FCGI\Record\Stdin;
 use Lisachenko\Protocol\FCGI\Record\Stdout;
 use Lisachenko\Protocol\FCGI\Record\EndRequest;
 
 include "vendor/autoload.php";
 
 $socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-if (!$socket) {
-    die("create server fail:" . socket_strerror(socket_last_error()) . "\n");
+if (! $socket) {
+    die("socket_create fail:" . socket_strerror(socket_last_error()) . "\n");
 }
 
 //绑定
-$ret = socket_bind($socket, "0.0.0.0", 9000);
-if (!$ret) {
-    die("bind server fail:" . socket_strerror(socket_last_error()) . "\n");
+$result = socket_bind($socket, "0.0.0.0", 9000);
+if (! $result) {
+    die("socket_bind fail:" . socket_strerror(socket_last_error()) . "\n");
 }
 
 //监听
-$ret = socket_listen($socket, 2);
-if (! $ret) {
-    die("listen server fail:" . socket_strerror(socket_last_error()) . "\n");
+$result = socket_listen($socket, 2);
+if (! $result) {
+    die("socket_listen fail:" . socket_strerror(socket_last_error()) . "\n");
 }
 
 echo "waiting client...\n";
@@ -34,7 +32,7 @@ while (true) {
     //阻塞等待客户端连接
     $connect = socket_accept($socket);
     if (! $connect) {
-        echo "accept server fail:" . socket_strerror(socket_last_error()) . "\n";
+        echo "socket_accept fail:" . socket_strerror(socket_last_error()) . "\n";
         break;
     }
 
@@ -44,7 +42,6 @@ while (true) {
     $buffer = socket_read($connect, 4096);
 
     // echo "recv: $buffer \n";
-
 
     $requestId = 0;
     $params = [];
@@ -81,12 +78,11 @@ while (true) {
 
     // 关闭链接
     socket_close($connect);
-   // socket_close($socket);
 
     echo "server close success \n";
-
-    // break;
 }
+
+ socket_close($socket);
 
 function getBytes(string $data)
 {

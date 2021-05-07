@@ -17,13 +17,13 @@ class Request
 
     public $body;
 
-    public $originCotent;
+    public string $buffer;
 
     public function __construct(string $buffer)
     {
-        $this->originCotent = $buffer;
+        $this->buffer = $buffer;
 
-        list($header, $body) = explode("\r\n\r\n", $this->originCotent);
+        list($header, $body) = explode("\r\n\r\n", $this->buffer);
 
         $headers = explode("\r\n", $header);
 
@@ -38,5 +38,17 @@ class Request
         }
 
         $this->body = $body;
+    }
+
+    public function getContentLength(): int
+    {
+        $length = $this->headers['Content-Length'] ?? 0;
+
+        return (int) $length;
+    }
+
+    public function getBodyLength(): int
+    {
+        return strlen($this->body);
     }
 }
