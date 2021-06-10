@@ -10,7 +10,9 @@ use Lisachenko\Protocol\FCGI\Record\Params;
 use Lisachenko\Protocol\FCGI\Record\Stdin;
 use Lisachenko\Protocol\FCGI\Record\Stdout;
 
+$request = new Request();
 
+//创建
 $socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
 if (! $socket) {
     die("socket_create fail: " . socket_strerror(socket_last_error()) . "\n");
@@ -51,18 +53,8 @@ while (true) {
 
         $recv .= $buffer;
 
-        // 判断请求头结束
-        if (strpos($recv, "\r\n\r\n") !== false) {
-            $request = new Request($recv);
-            $contentLength = $request->getContentLength();
-        }
-
-        // 判断请求体结束
-        if (! is_null($contentLength)) {
-            if ((new Request($recv))->getBodyLength() >= $contentLength) {
-                echo "request body end. \n";
-                break;
-            }
+        if ($request->parse($recv)) {
+            break;
         }
 
         // 客户端关闭或者超时才会到这里
@@ -73,18 +65,21 @@ while (true) {
         }
     }
 
-    $request = new Request($recv);
+    echo "--------------------------------------------recv--------------------------------------------\n";
+    echo $recv . "\n";
+    echo "--------------------------------------------recv--------------------------------------------\n";
+
     $params = [];
-    $parts = parse_url($request->uri);
+    $parts = parse_url($request->getUri());
     if (! empty($parts['query'])) {
         parse_str($parts['query'], $params);
     }
 
     //cgi返回的数据
-    $cgiContent = cgi($params);
+    $content = "Hello " . $request->getContent()['name'];
 
     //发送消息
-    socket_write($connect, (new Response($cgiContent))->getContent());
+    socket_write($connect, cgi($params));
 
     // 关闭链接
     socket_close($connect);
@@ -143,10 +138,4 @@ function cgi(array $params)
     var_dump($contentData);
 
     return $contentData;
-}
-
-
-function cgi2()
-{
-
 }

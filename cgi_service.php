@@ -26,10 +26,10 @@ if (! $result) {
     die("socket_listen fail:" . socket_strerror(socket_last_error()) . "\n");
 }
 
-echo "waiting client...\n";
+echo "waiting client connect...\n";
 
 while (true) {
-    //阻塞等待客户端连接
+    //等待客户端连接, socket_accept是阻塞调用
     $connect = socket_accept($socket);
     if (! $connect) {
         echo "socket_accept fail:" . socket_strerror(socket_last_error()) . "\n";
@@ -39,15 +39,22 @@ while (true) {
     echo "client connect success.\n";
 
     //循环读取消息
-    $buffer = socket_read($connect, 4096);
+    $buffer = socket_read($connect, 65535);
 
-    // echo "recv: $buffer \n";
+    $data = unpack(FCGI::HEADER_FORMAT, $buffer);
+
+
+    echo "------------------------------------------recv------------------------------------------\n";
+    //echo "$buffer \n";
+    echo implode(" ", getBytes($buffer)) . "\n";
+    echo "------------------------------------------recv------------------------------------------\n";
+    
 
     $requestId = 0;
     $params = [];
     while (FrameParser::hasFrame($buffer)) {
         $record = FrameParser::parseFrame($buffer);
-        var_dump("---------------------", $record);
+        var_dump($record);
         if ($record instanceof BeginRequest) {
             $requestId = $record->getRequestId();
         } elseif ($record instanceof Params) {
@@ -60,10 +67,8 @@ while (true) {
     $body = "hello $name";
     $bodySize = strlen($body);
     $messages = [
-        // we can also split responses into several chunks for streaming large response
         new Stdout("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {$bodySize}\r\n\r\n{$body}"),
-        //new Stdout(''), // empty one, according to the specification
-        new EndRequest(FCGI::REQUEST_COMPLETE, $appStatus = 0), // normal request termination
+        new EndRequest(FCGI::REQUEST_COMPLETE, $appStatus = 0),
     ];
     $responseContent = '';
     foreach ($messages as $message) {
@@ -79,10 +84,12 @@ while (true) {
     // 关闭链接
     socket_close($connect);
 
-    echo "server close success \n";
+    echo "socket_close connect success. \n";
 }
 
- socket_close($socket);
+socket_close($socket);
+
+echo "socket_close socket success. \n";
 
 function getBytes(string $data)
 {

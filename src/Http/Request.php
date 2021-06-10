@@ -3,41 +3,90 @@ declare(strict_types=1);
 
 namespace Pingink\Protocol\Http;
 
-
+/**
+ * Class Request
+ * @package Pingink\Protocol\Http
+ */
 class Request
 {
+    public const STATUS_INIT = 0;
+    public const STATUS_HEADER = 1;
+    public const STATUS_BODY = 2;
 
-    public string $method;
+    private int $status = self::STATUS_INIT;
 
-    public string $uri;
+    private string $method;
 
-    public string $version;
+    private string $uri;
 
-    public array $headers;
+    private string $version;
 
-    public $body;
+    private array $headers;
 
-    public string $buffer;
+    private string $body;
 
-    public function __construct(string $buffer)
+    private string $buffer;
+
+    /**
+     * 解析
+     *
+     * @param string $buffer
+     * @return bool
+     * @author: zhengchenping
+     * @time: 2021/5/14 0:10
+     */
+    public function parse(string $buffer): bool
     {
         $this->buffer = $buffer;
 
-        list($header, $body) = explode("\r\n\r\n", $this->buffer);
-
-        $headers = explode("\r\n", $header);
-
-        list($this->method, $this->uri, $this->version) = explode(" ", $headers[0]);
-
-        unset($headers[0]);
-
-        foreach ($headers as $item) {
-            list($key, $val) = explode(": ", $item);
-
-            $this->headers[$key] = $val;
+        if ($this->status === self::STATUS_BODY) {
+            return true;
         }
 
-        $this->body = $body;
+        if ($this->hasHeader()) {
+            if ($this->getContentLength() === 0) {
+                $this->status = self::STATUS_BODY;
+                return true;
+            }
+
+            $arr = explode("\r\n\r\n", $this->buffer);
+            if (! empty($arr[1])) {
+                $this->body = $arr[1];
+
+                if ($this->getContentLength() === $this->getBodyLength()) {
+                    $this->status = self::STATUS_BODY;
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    public function hasHeader(): bool
+    {
+        if ($this->status === self::STATUS_HEADER) {
+            return true;
+        }
+
+        if (strpos($this->buffer, "\r\n\r\n") !== false) {
+            $arr = explode("\r\n\r\n", $this->buffer);
+
+            $headers = $arr[0];
+
+            [$this->method, $this->uri, $this->version] = explode(" ", $headers[0]);
+
+            unset($headers[0]);
+
+            foreach ($headers as $header) {
+                [$key, $val] = explode(": ", $header);
+                $this->headers[$key] = $val;
+            }
+
+            $this->status = self::STATUS_HEADER;
+        }
+
+        return false;
     }
 
     public function getContentLength(): int
@@ -50,5 +99,22 @@ class Request
     public function getBodyLength(): int
     {
         return strlen($this->body);
+    }
+
+    public function getContent()
+    {
+        if (empty($this->body)) {
+            return "";
+        }
+
+        if ($this->headers['Content-Type'] === 'application/json') {
+            return json_decode($this->body, true);
+        }
+        return $this->body;
+    }
+
+    public function getUri(): string
+    {
+        return $this->uri;
     }
 }
